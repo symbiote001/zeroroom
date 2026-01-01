@@ -921,6 +921,7 @@ class ParticleSystem {
 /* ============================================================
    CORE APPLICATION STATE
    Manages peer connections, media streams, and room state
+   Uses a "room hub" pattern for peer discovery across devices
    ============================================================ */
 const App = {
   peer: null,
@@ -930,6 +931,9 @@ const App = {
   peers: {}, // { peerId: { connection, call, stream } }
   micEnabled: true,
   cameraEnabled: true,
+  isRoomHub: false,
+  hubConnection: null,
+  roomPeerIds: [], // Track all peer IDs in the room
   
   /* Initialize the application */
   init() {
@@ -964,8 +968,11 @@ const App = {
       // Add local video to grid
       this.addVideoElement('You (Me)', this.localStream, true);
       
-      // Initialize PeerJS with cloud signaling
-      this.peer = new Peer({
+      // Try to become or connect to the room hub
+      const hubId = this.getRoomHubId(roomName);
+      
+      // Initialize PeerJS - try to claim the hub ID first
+      this.peer = new Peer(hubId, {
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -977,7 +984,14 @@ const App = {
       // Set up peer event listeners
       this.peer.on('open', (id) => {
         this.myPeerId = id;
-        this.announceToRoom();
+        
+        // If we got the hub ID, we're the room hub
+        if (id === hubId) {
+          this.isRoomHub = true;
+          this.addChatMessage(null, `Welcome to ${roomName}! You're the first here.`, true);
+          console.log('🌟 Became room hub for', roomName);
+        }
+        
         this.updateStatus('Connected', true);
       });
       
@@ -990,12 +1004,40 @@ const App = {
       });
       
       this.peer.on('error', (err) => {
-        console.error('Peer error:', err);
-        this.updateStatus('Connection Error', false);
+        console.log('Could not claim hub ID, joining as regular peer');
+        
+        // Hub ID is taken, so join as a regular peer
+        this.peer.destroy();
+        
+        // Create peer with random ID
+        this.peer = new Peer({
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+          }
+        });
+        
+        this.peer.on('open', (id) => {
+          this.myPeerId = id;
+          this.connectToRoomHub();
+          this.updateStatus('Connected', true);
+        });
+        
+        this.peer.on('connection', (conn) => {
+          this.handleConnection(conn);
+        });
+        
+        this.peer.on('call', (call) => {
+          this.handleCall(call);
+        });
+        
+        this.peer.on('error', (err2) => {
+          console.error('Peer error:', err2);
+          this.updateStatus('Connection Error', false);
+        });
       });
-      
-      // Add welcome message
-      this.addChatMessage(null, `Welcome to ${roomName}!`, true);
       
     } catch (err) {
       console.error('Error accessing media:', err);
@@ -1004,50 +1046,149 @@ const App = {
     }
   },
   
-  /* Announce presence to room using localStorage-based discovery */
-  announceToRoom() {
-    const roomKey = `zeroroom_${this.currentRoom}`;
-    const roomPeers = JSON.parse(localStorage.getItem(roomKey) || '[]');
+  /* Generate deterministic hub ID for a room */
+  getRoomHubId(roomName) {
+    // Create a predictable hub ID for each room
+    return `zeroroom-hub-${roomName}`;
+  },
+  
+  /* Connect to the room hub */
+  connectToRoomHub() {
+    const hubId = this.getRoomHubId(this.currentRoom);
     
-    // Connect to all existing peers in room
-    roomPeers.forEach(peerId => {
-      if (peerId !== this.myPeerId) {
-        this.connectToPeer(peerId);
+    console.log('🔌 Connecting to room hub:', hubId);
+    
+    this.hubConnection = this.peer.connect(hubId, { reliable: true });
+    
+    this.hubConnection.on('open', () => {
+      console.log('✅ Connected to room hub');
+      this.addChatMessage(null, `Joined ${this.currentRoom}!`, true);
+      
+      // Announce presence to hub
+      this.hubConnection.send({
+        type: 'join',
+        peerId: this.myPeerId
+      });
+    });
+    
+    this.hubConnection.on('data', (data) => {
+      if (data.type === 'peers') {
+        // Hub sent us the list of all peers in the room
+        console.log('📋 Received peer list:', data.peers);
+        
+        data.peers.forEach(peerId => {
+          if (peerId !== this.myPeerId && !this.peers[peerId]) {
+            this.connectToPeer(peerId);
+          }
+        });
+      } else if (data.type === 'new-peer') {
+        // Hub notified us about a new peer
+        console.log('👋 New peer joined:', data.peerId);
+        
+        if (data.peerId !== this.myPeerId && !this.peers[data.peerId]) {
+          this.connectToPeer(data.peerId);
+        }
       }
     });
     
-    // Add self to room peer list
-    if (!roomPeers.includes(this.myPeerId)) {
-      roomPeers.push(this.myPeerId);
-      localStorage.setItem(roomKey, JSON.stringify(roomPeers));
-    }
+    this.hubConnection.on('close', () => {
+      console.log('⚠️ Hub connection closed');
+      this.updateStatus('Reconnecting...', false);
+      
+      // Try to reconnect or become the new hub
+      setTimeout(() => {
+        if (this.currentRoom) {
+          this.attemptHubTakeover();
+        }
+      }, 2000);
+    });
     
-    this.updateParticipantCount();
-    
-    // Clean up on page unload
-    window.addEventListener('beforeunload', () => {
-      this.removeFromRoom();
+    this.hubConnection.on('error', (err) => {
+      console.error('Hub connection error:', err);
     });
   },
   
-  /* Remove self from room */
-  removeFromRoom() {
-    if (!this.currentRoom || !this.myPeerId) return;
+  /* Attempt to become the new hub if the old one disconnected */
+  attemptHubTakeover() {
+    console.log('🔄 Attempting to become new hub...');
     
-    const roomKey = `zeroroom_${this.currentRoom}`;
-    const roomPeers = JSON.parse(localStorage.getItem(roomKey) || '[]');
-    const filtered = roomPeers.filter(p => p !== this.myPeerId);
-    localStorage.setItem(roomKey, JSON.stringify(filtered));
+    // Close current peer
+    if (this.peer) {
+      this.peer.destroy();
+    }
+    
+    const hubId = this.getRoomHubId(this.currentRoom);
+    
+    // Try to claim hub ID
+    this.peer = new Peer(hubId, {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+    
+    this.peer.on('open', (id) => {
+      if (id === hubId) {
+        console.log('🌟 Became new room hub');
+        this.isRoomHub = true;
+        this.myPeerId = id;
+        this.hubConnection = null;
+        this.updateStatus('Connected', true);
+        
+        // Notify all existing peers
+        Object.values(this.peers).forEach(peer => {
+          if (peer.connection && peer.connection.open) {
+            peer.connection.send({
+              type: 'new-hub',
+              hubId: hubId
+            });
+          }
+        });
+      }
+    });
+    
+    this.peer.on('connection', (conn) => {
+      this.handleConnection(conn);
+    });
+    
+    this.peer.on('call', (call) => {
+      this.handleCall(call);
+    });
+    
+    this.peer.on('error', (err) => {
+      console.log('Could not become hub, staying as regular peer');
+      // If we can't become hub, recreate as regular peer and try to reconnect
+      this.peer.destroy();
+      this.peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+      
+      this.peer.on('open', (id) => {
+        this.myPeerId = id;
+        this.connectToRoomHub();
+      });
+    });
   },
   
   /* Connect to a specific peer */
   connectToPeer(peerId) {
     if (this.peers[peerId]) return; // Already connected
     
+    console.log('🔗 Connecting to peer:', peerId);
+    
     // Establish data connection for chat
     const conn = this.peer.connect(peerId, { reliable: true });
     
     conn.on('open', () => {
+      console.log('✅ Connected to peer:', peerId);
+      
       // Call peer for video
       const call = this.peer.call(peerId, this.localStream);
       
@@ -1059,11 +1200,23 @@ const App = {
       this.setupConnectionListeners(conn, peerId);
       this.updateParticipantCount();
     });
+    
+    conn.on('error', (err) => {
+      console.error('Connection error to peer', peerId, ':', err);
+    });
   },
   
   /* Handle incoming connection */
   handleConnection(conn) {
     const peerId = conn.peer;
+    
+    console.log('📞 Incoming connection from:', peerId);
+    
+    // If we're the hub, handle specially
+    if (this.isRoomHub) {
+      this.handleHubConnection(conn);
+      return;
+    }
     
     if (!this.peers[peerId]) {
       this.peers[peerId] = { connection: conn };
@@ -1073,6 +1226,63 @@ const App = {
     
     this.setupConnectionListeners(conn, peerId);
     this.updateParticipantCount();
+  },
+  
+  /* Handle connections when we are the room hub */
+  handleHubConnection(conn) {
+    const peerId = conn.peer;
+    
+    conn.on('open', () => {
+      console.log('🎯 Hub: peer connected -', peerId);
+    });
+    
+    conn.on('data', (data) => {
+      if (data.type === 'join') {
+        // New peer joining - add to our list
+        if (!this.roomPeerIds.includes(data.peerId)) {
+          this.roomPeerIds.push(data.peerId);
+          console.log('➕ Hub: added peer', data.peerId, '- total:', this.roomPeerIds.length);
+        }
+        
+        // Send them the full peer list (excluding themselves)
+        const otherPeers = this.roomPeerIds.filter(p => p !== data.peerId && p !== this.myPeerId);
+        conn.send({
+          type: 'peers',
+          peers: otherPeers
+        });
+        
+        // Notify all other peers about the new peer
+        this.roomPeerIds.forEach(otherId => {
+          if (otherId !== data.peerId && otherId !== this.myPeerId) {
+            const otherPeer = this.peers[otherId];
+            if (otherPeer && otherPeer.connection && otherPeer.connection.open) {
+              otherPeer.connection.send({
+                type: 'new-peer',
+                peerId: data.peerId
+              });
+            }
+          }
+        });
+        
+        // Also connect to this peer ourselves if not already connected
+        if (!this.peers[peerId]) {
+          this.connectToPeer(peerId);
+        }
+      }
+    });
+    
+    conn.on('close', () => {
+      console.log('🔌 Hub: peer disconnected -', peerId);
+      this.roomPeerIds = this.roomPeerIds.filter(p => p !== peerId);
+      this.removePeer(peerId);
+    });
+    
+    // Store the connection
+    if (!this.peers[peerId]) {
+      this.peers[peerId] = { connection: conn };
+    } else {
+      this.peers[peerId].connection = conn;
+    }
   },
   
   /* Handle incoming call */
@@ -1100,6 +1310,15 @@ const App = {
         this.addChatMessage(data.sender, data.message);
       } else if (data.type === 'join') {
         this.addChatMessage(null, `${data.sender} joined`, true);
+      } else if (data.type === 'new-peer') {
+        // Hub told us about a new peer
+        console.log('🆕 Hub notified about new peer:', data.peerId);
+        if (data.peerId !== this.myPeerId && !this.peers[data.peerId]) {
+          this.connectToPeer(data.peerId);
+        }
+      } else if (data.type === 'peers') {
+        // Hub sent initial peer list (handled in connectToRoomHub, but just in case)
+        console.log('📋 Received peer list in setupConnectionListeners');
       }
     });
     
@@ -1257,6 +1476,12 @@ const App = {
       this.localStream = null;
     }
     
+    // Close hub connection if we have one
+    if (this.hubConnection) {
+      this.hubConnection.close();
+      this.hubConnection = null;
+    }
+    
     // Close all peer connections
     Object.keys(this.peers).forEach(peerId => {
       this.removePeer(peerId);
@@ -1268,9 +1493,6 @@ const App = {
       this.peer = null;
     }
     
-    // Remove from room
-    this.removeFromRoom();
-    
     // Clear video grid
     document.getElementById('video-grid').innerHTML = '';
     
@@ -1281,6 +1503,8 @@ const App = {
     this.currentRoom = null;
     this.myPeerId = null;
     this.peers = {};
+    this.isRoomHub = false;
+    this.roomPeerIds = [];
     
     // Show room selection again
     document.getElementById('main-header').classList.add('hidden');
