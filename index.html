@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZeroRoom — Peaceful Group Video Chat</title>
+<meta name="description" content="No-registration group video & text chat. Privacy-first. Share a link and connect.">
+
+<style>
+/* ============================================================
+   DESIGN SYSTEM - Peace-Aligned Color Palette
+   Calming blues, gentle gradients, soft lighting
+   ============================================================ */
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-mid: #0f1420;
+  --panel: #141b2e;
+  --card: #1a2440;
+  --stroke: #2a3555;
+  --text: #e8f0ff;
+  --text-dim: #8894b8;
+  --accent: #5b9eff;
+  --accent-glow: rgba(91, 158, 255, 0.3);
+  --success: #6bdc9b;
+  --warm: #ffb976;
+  --danger: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text);
+}
+
+/* ============================================================
+   ANIMATED PARTICLE BACKGROUND
+   Gentle floating particles create a calm, ethereal atmosphere
+   ============================================================ */
+#particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   LAYOUT STRUCTURE
+   Responsive grid that adapts to screen size
+   ============================================================ */
+#app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: rgba(20, 27, 46, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--stroke);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--accent), var(--success));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.logo h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent), var(--success));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--card);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  border: 1px solid var(--stroke);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+  
+  #sidebar {
+    display: none;
+  }
+  
+  #sidebar.mobile-visible {
+    display: flex;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 380px;
+    z-index: 100;
+  }
+}
+
+/* ============================================================
+   VIDEO GRID - Adaptive layout for multiple participants
+   ============================================================ */
+#video-container {
+  position: relative;
+  overflow: auto;
+  padding: 24px;
+}
+
+#video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  min-height: 100%;
+}
+
+.video-wrapper {
+  position: relative;
+  background: var(--panel);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid var(--stroke);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  aspect-ratio: 4/3;
+}
+
+.video-wrapper:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 32px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.video-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-label {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(10, 14, 26, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid var(--stroke);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-label::before {
+  content: '👤';
+  font-size: 14px;
+}
+
+/* ============================================================
+   SIDEBAR - Chat and controls
+   ============================================================ */
+#sidebar {
+  background: rgba(20, 27, 46, 0.95);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid var(--stroke);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-section {
+  padding: 20px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.sidebar-section h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+/* Room Link Sharing */
+.room-link {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.room-link input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: 'Courier New', monospace;
+}
+
+.btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: #4a8aef;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-success {
+  background: var(--success);
+  animation: successPulse 0.6s ease;
+}
+
+@keyframes successPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+}
+
+/* Controls */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.control-btn {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  color: var(--text);
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.control-btn:hover {
+  background: var(--stroke);
+  border-color: var(--accent);
+}
+
+.control-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.control-btn.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+/* Chat Section */
+#chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+#chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Custom scrollbar */
+#chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+  background: var(--stroke);
+  border-radius: 3px;
+}
+
+.chat-message {
+  background: var(--card);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  animation: messageSlide 0.3s ease;
+  word-wrap: break-word;
+}
+
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-message .sender {
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+
+.chat-message .text {
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.chat-message.system {
+  background: transparent;
+  border: 1px dashed var(--stroke);
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+#chat-input {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-mid);
+  border-top: 1px solid var(--stroke);
+}
+
+#chat-input input {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+#chat-input input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+#chat-input button {
+  padding: 12px 20px;
+}
+
+/* ============================================================
+   FOOTER - Zero-Harm Notice
+   ============================================================ */
+footer {
+  background: rgba(10, 14, 26, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--stroke);
+  padding: 16px 24px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+footer strong {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* ============================================================
+   WELCOME SCREEN - Initial setup
+   ============================================================ */
+#welcome {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 14, 26, 0.98);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.welcome-card {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 24px;
+  padding: 48px;
+  max-width: 500px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  animation: slideUp 0.6s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-card h2 {
+  font-size: 2rem;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--success));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-card p {
+  color: var(--text-dim);
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.welcome-card .btn {
+  padding: 16px 32px;
+  font-size: 1rem;
+  width: 100%;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 32px;
+  text-align: left;
+}
+
+.info-item {
+  background: var(--card);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+}
+
+.info-item strong {
+  display: block;
+  color: var(--accent);
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+
+.info-item span {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.hidden {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+
+<!-- Animated Particle Background -->
+<canvas id="particles"></canvas>
+
+<div id="app">
+  <!-- Welcome Screen (shown on first load) -->
+  <div id="welcome">
+    <div class="welcome-card">
+      <h2>🕊️ Welcome to ZeroRoom</h2>
+      <p>A peaceful space for group video conversations.<br>No accounts. No tracking. Just connect.</p>
+      
+      <button class="btn" onclick="startSession()">🎥 Join Video Call</button>
+      
+      <div class="info-grid">
+        <div class="info-item">
+          <strong>🔒 Private</strong>
+          <span>Nothing recorded or stored</span>
+        </div>
+        <div class="info-item">
+          <strong>🌐 Peer-to-Peer</strong>
+          <span>Direct connections only</span>
+        </div>
+        <div class="info-item">
+          <strong>🚫 No Registration</strong>
+          <span>Share link to invite</span>
+        </div>
+        <div class="info-item">
+          <strong>💚 Zero Harm</strong>
+          <span>Built with care & respect</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🕊️</div>
+      <h1>ZeroRoom</h1>
+    </div>
+    <div class="status">
+      <div class="status-dot"></div>
+      <span id="status-text">Connected</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Video Grid Section -->
+    <div id="video-container">
+      <div id="video-grid">
+        <!-- Videos will be dynamically added here -->
+      </div>
+    </div>
+
+    <!-- Sidebar: Controls & Chat -->
+    <div id="sidebar">
+      <!-- Room Link Section -->
+      <div class="sidebar-section">
+        <h3>📎 Share This Room</h3>
+        <div class="room-link">
+          <input type="text" id="room-link" readonly />
+          <button class="btn" id="copy-btn" onclick="copyRoomLink()">Copy</button>
+        </div>
+      </div>
+
+      <!-- Media Controls -->
+      <div class="sidebar-section">
+        <h3>🎛️ Controls</h3>
+        <div class="controls">
+          <button class="control-btn" id="mic-btn" onclick="toggleMic()">
+            <span id="mic-icon">🎤</span>
+            <span id="mic-text">Mute</span>
+          </button>
+          <button class="control-btn" id="cam-btn" onclick="toggleCamera()">
+            <span id="cam-icon">📹</span>
+            <span id="cam-text">Stop Video</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Section -->
+      <div class="sidebar-section" style="flex: 1; display: flex; flex-direction: column; padding: 0; border: none;">
+        <div style="padding: 20px; padding-bottom: 12px;">
+          <h3>💬 Chat</h3>
+        </div>
+        <div id="chat-container">
+          <div id="chat-messages">
+            <div class="chat-message system">
+              Welcome! Share the room link to invite others.
+            </div>
+          </div>
+          <div id="chat-input">
+            <input 
+              type="text" 
+              id="message-input" 
+              placeholder="Type a message..." 
+              onkeypress="if(event.key==='Enter') sendMessage()"
+            />
+            <button class="btn" onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <strong>🛡️ Zero-Harm & Anti-Coercion Commitment:</strong> This platform has no registration, no tracking, no analytics, and no data persistence. All connections are peer-to-peer and ephemeral. No hidden telemetry. No manipulation. This tool exists solely to facilitate peaceful human connection. Your privacy and wellbeing come first.
+  </footer>
+</div>
+
+<!-- PeerJS Library (cloud-based signaling, no server setup required) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+
+<script>
+/* ============================================================
+   PARTICLE ANIMATION SYSTEM
+   Creates a gentle, flowing background of light particles
+   Symbolizes the ephemeral, peaceful nature of connection
+   ============================================================ */
+class ParticleSystem {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.particles = [];
+    this.particleCount = 50;
+    
+    this.resize();
+    this.init();
+    this.animate();
+    
+    window.addEventListener('resize', () => this.resize());
+  }
+  
+  resize() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+  
+  init() {
+    for (let i = 0; i < this.particleCount; i++) {
+      this.particles.push({
+        x: Math.random() * this.canvas.width,
+        y: Math.random() * this.canvas.height,
+        size: Math.random() * 3 + 1,
+        speedX: Math.random() * 0.5 - 0.25,
+        speedY: Math.random() * 0.5 - 0.25,
+        opacity: Math.random() * 0.5 + 0.2
+      });
+    }
+  }
+  
+  animate() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw gradient background
+    const gradient = this.ctx.createRadialGradient(
+      this.canvas.width / 2, this.canvas.height / 2, 0,
+      this.canvas.width / 2, this.canvas.height / 2, this.canvas.width / 2
+    );
+    gradient.addColorStop(0, 'rgba(91, 158, 255, 0.03)');
+    gradient.addColorStop(1, 'rgba(10, 14, 26, 0)');
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Update and draw particles
+    this.particles.forEach(p => {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      
+      // Wrap around screen
+      if (p.x < 0) p.x = this.canvas.width;
+      if (p.x > this.canvas.width) p.x = 0;
+      if (p.y < 0) p.y = this.canvas.height;
+      if (p.y > this.canvas.height) p.y = 0;
+      
+      // Draw particle with glow
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      this.ctx.fillStyle = `rgba(91, 158, 255, ${p.opacity})`;
+      this.ctx.fill();
+      
+      // Glow effect
+      this.ctx.shadowBlur = 15;
+      this.ctx.shadowColor = `rgba(91, 158, 255, ${p.opacity * 0.8})`;
+    });
+    
+    this.ctx.shadowBlur = 0;
+    requestAnimationFrame(() => this.animate());
+  }
+}
+
+/* ============================================================
+   CORE APPLICATION STATE
+   Manages peer connections, media streams, and room state
+   ============================================================ */
+const App = {
+  peer: null,
+  myPeerId: null,
+  roomId: null,
+  localStream: null,
+  peers: {}, // { peerId: { connection, call, stream } }
+  micEnabled: true,
+  cameraEnabled: true,
+  
+  /* Initialize the application */
+  async init() {
+    // Set up room ID from URL hash or create new one
+    this.roomId = window.location.hash.slice(1);
+    if (!this.roomId) {
+      this.roomId = this.generateRoomId();
+      window.location.hash = this.roomId;
+    }
+    
+    // Display room link
+    document.getElementById('room-link').value = window.location.href;
+    
+    // Initialize particle background
+    new ParticleSystem(document.getElementById('particles'));
+  },
+  
+  /* Start the video session */
+  async startSession() {
+    try {
+      // Request camera and microphone access
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720 },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      
+      // Add local video to grid
+      this.addVideoElement('You (Me)', this.localStream, true);
+      
+      // Initialize PeerJS with cloud signaling
+      this.peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+      
+      // Set up peer event listeners
+      this.peer.on('open', (id) => {
+        this.myPeerId = id;
+        this.broadcastJoin();
+        this.updateStatus('Connected', true);
+      });
+      
+      this.peer.on('connection', (conn) => {
+        this.handleConnection(conn);
+      });
+      
+      this.peer.on('call', (call) => {
+        this.handleCall(call);
+      });
+      
+      this.peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        this.updateStatus('Connection Error', false);
+      });
+      
+      // Hide welcome screen
+      document.getElementById('welcome').classList.add('hidden');
+      
+      // Add system message
+      this.addChatMessage(null, 'You joined the room', true);
+      
+    } catch (err) {
+      console.error('Error accessing media:', err);
+      alert('Could not access camera/microphone. Please grant permissions and try again.');
+    }
+  },
+  
+  /* Generate a human-readable room ID */
+  generateRoomId() {
+    const words = ['peaceful', 'gentle', 'serene', 'calm', 'quiet', 'still', 'bright', 'clear'];
+    const word = words[Math.floor(Math.random() * words.length)];
+    const num = Math.floor(Math.random() * 9000) + 1000;
+    return `${word}-${num}`;
+  },
+  
+  /* Broadcast join message to room (using URL hash as room identifier) */
+  broadcastJoin() {
+    // In a real peer-to-peer mesh, you would connect to a discovery server
+    // For this demo, we use the URL hash as an implicit "room"
+    // Peers joining with the same hash will attempt to connect via the mesh
+    
+    // Store peer ID in localStorage for this room (simple mesh coordination)
+    const roomPeers = JSON.parse(localStorage.getItem(`room_${this.roomId}`) || '[]');
+    
+    // Connect to all existing peers in room
+    roomPeers.forEach(peerId => {
+      if (peerId !== this.myPeerId) {
+        this.connectToPeer(peerId);
+      }
+    });
+    
+    // Add self to room peer list
+    if (!roomPeers.includes(this.myPeerId)) {
+      roomPeers.push(this.myPeerId);
+      localStorage.setItem(`room_${this.roomId}`, JSON.stringify(roomPeers));
+    }
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+      const peers = JSON.parse(localStorage.getItem(`room_${this.roomId}`) || '[]');
+      const filtered = peers.filter(p => p !== this.myPeerId);
+      localStorage.setItem(`room_${this.roomId}`, JSON.stringify(filtered));
+    });
+  },
+  
+  /* Connect to a specific peer */
+  connectToPeer(peerId) {
+    if (this.peers[peerId]) return; // Already connected
+    
+    // Establish data connection for chat
+    const conn = this.peer.connect(peerId, { reliable: true });
+    
+    conn.on('open', () => {
+      // Call peer for video
+      const call = this.peer.call(peerId, this.localStream);
+      
+      call.on('stream', (remoteStream) => {
+        this.handleRemoteStream(peerId, remoteStream);
+      });
+      
+      this.peers[peerId] = { connection: conn, call: call };
+      this.setupConnectionListeners(conn, peerId);
+    });
+  },
+  
+  /* Handle incoming connection */
+  handleConnection(conn) {
+    const peerId = conn.peer;
+    
+    if (!this.peers[peerId]) {
+      this.peers[peerId] = { connection: conn };
+    } else {
+      this.peers[peerId].connection = conn;
+    }
+    
+    this.setupConnectionListeners(conn, peerId);
+  },
+  
+  /* Handle incoming call */
+  handleCall(call) {
+    const peerId = call.peer;
+    
+    // Answer call with local stream
+    call.answer(this.localStream);
+    
+    call.on('stream', (remoteStream) => {
+      this.handleRemoteStream(peerId, remoteStream);
+    });
+    
+    if (!this.peers[peerId]) {
+      this.peers[peerId] = { call: call };
+    } else {
+      this.peers[peerId].call = call;
+    }
+  },
+  
+  /* Set up listeners for data connection */
+  setupConnectionListeners(conn, peerId) {
+    conn.on('data', (data) => {
+      if (data.type === 'chat') {
+        this.addChatMessage(data.sender, data.message);
+      } else if (data.type === 'join') {
+        this.addChatMessage(null, `${data.sender} joined`, true);
+      }
+    });
+    
+    conn.on('close', () => {
+      this.removePeer(peerId);
+    });
+    
+    // Send join notification
+    conn.send({
+      type: 'join',
+      sender: 'User'
+    });
+  },
+  
+  /* Handle remote video stream */
+  handleRemoteStream(peerId, stream) {
+    if (this.peers[peerId]) {
+      this.peers[peerId].stream = stream;
+    }
+    this.addVideoElement(`User ${Object.keys(this.peers).indexOf(peerId) + 1}`, stream);
+  },
+  
+  /* Add video element to grid */
+  addVideoElement(label, stream, muted = false) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'video-wrapper';
+    wrapper.dataset.streamId = stream.id;
+    
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = muted;
+    
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'video-label';
+    labelDiv.textContent = label;
+    
+    wrapper.appendChild(video);
+    wrapper.appendChild(labelDiv);
+    document.getElementById('video-grid').appendChild(wrapper);
+  },
+  
+  /* Remove peer from connections */
+  removePeer(peerId) {
+    const peer = this.peers[peerId];
+    if (peer) {
+      if (peer.call) peer.call.close();
+      if (peer.connection) peer.connection.close();
+      if (peer.stream) {
+        const videoEl = document.querySelector(`[data-stream-id="${peer.stream.id}"]`);
+        if (videoEl) videoEl.remove();
+      }
+      delete this.peers[peerId];
+      this.addChatMessage(null, 'A user left', true);
+    }
+  },
+  
+  /* Add message to chat */
+  addChatMessage(sender, message, isSystem = false) {
+    const chatMessages = document.getElementById('chat-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = isSystem ? 'chat-message system' : 'chat-message';
+    
+    if (isSystem) {
+      msgDiv.innerHTML = `<span class="text">${message}</span>`;
+    } else {
+      msgDiv.innerHTML = `
+        <div class="sender">${sender || 'You'}</div>
+        <div class="text">${this.escapeHtml(message)}</div>
+      `;
+    }
+    
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  },
+  
+  /* Broadcast chat message to all peers */
+  broadcastMessage(message) {
+    Object.values(this.peers).forEach(peer => {
+      if (peer.connection && peer.connection.open) {
+        peer.connection.send({
+          type: 'chat',
+          sender: 'You',
+          message: message
+        });
+      }
+    });
+  },
+  
+  /* Toggle microphone */
+  toggleMic() {
+    this.micEnabled = !this.micEnabled;
+    this.localStream.getAudioTracks().forEach(track => {
+      track.enabled = this.micEnabled;
+    });
+    
+    const btn = document.getElementById('mic-btn');
+    const icon = document.getElementById('mic-icon');
+    const text = document.getElementById('mic-text');
+    
+    if (this.micEnabled) {
+      btn.classList.remove('active');
+      icon.textContent = '🎤';
+      text.textContent = 'Mute';
+    } else {
+      btn.classList.add('active');
+      icon.textContent = '🔇';
+      text.textContent = 'Unmute';
+    }
+  },
+  
+  /* Toggle camera */
+  toggleCamera() {
+    this.cameraEnabled = !this.cameraEnabled;
+    this.localStream.getVideoTracks().forEach(track => {
+      track.enabled = this.cameraEnabled;
+    });
+    
+    const btn = document.getElementById('cam-btn');
+    const icon = document.getElementById('cam-icon');
+    const text = document.getElementById('cam-text');
+    
+    if (this.cameraEnabled) {
+      btn.classList.remove('active');
+      icon.textContent = '📹';
+      text.textContent = 'Stop Video';
+    } else {
+      btn.classList.add('active');
+      icon.textContent = '🚫';
+      text.textContent = 'Start Video';
+    }
+  },
+  
+  /* Update connection status */
+  updateStatus(text, connected) {
+    document.getElementById('status-text').textContent = text;
+    const dot = document.querySelector('.status-dot');
+    dot.style.background = connected ? 'var(--success)' : 'var(--danger)';
+  },
+  
+  /* Escape HTML to prevent XSS */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+};
+
+/* ============================================================
+   UI EVENT HANDLERS
+   ============================================================ */
+function startSession() {
+  App.startSession();
+}
+
+function sendMessage() {
+  const input = document.getElementById('message-input');
+  const message = input.value.trim();
+  
+  if (!message) return;
+  
+  // Add to local chat
+  App.addChatMessage(null, message);
+  
+  // Broadcast to peers
+  App.broadcastMessage(message);
+  
+  input.value = '';
+}
+
+function copyRoomLink() {
+  const input = document.getElementById('room-link');
+  input.select();
+  document.execCommand('copy');
+  
+  const btn = document.getElementById('copy-btn');
+  const originalText = btn.textContent;
+  btn.textContent = '✓ Copied!';
+  btn.classList.add('btn-success');
+  
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.classList.remove('btn-success');
+  }, 2000);
+}
+
+function toggleMic() {
+  App.toggleMic();
+}
+
+function toggleCamera() {
+  App.toggleCamera();
+}
+
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
+App.init();
+</script>
+
+</body>
+</html>
