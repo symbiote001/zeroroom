@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZeroRoom — Peaceful Group Video Chat</title>
+<meta name="description" content="No-registration group video & text chat. Privacy-first. Walk into any room and connect.">
+
+<style>
+/* ============================================================
+   DESIGN SYSTEM - Peace-Aligned Color Palette
+   Calming blues, gentle gradients, soft lighting
+   ============================================================ */
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-mid: #0f1420;
+  --panel: #141b2e;
+  --card: #1a2440;
+  --stroke: #2a3555;
+  --text: #e8f0ff;
+  --text-dim: #8894b8;
+  --accent: #5b9eff;
+  --accent-glow: rgba(91, 158, 255, 0.3);
+  --success: #6bdc9b;
+  --warm: #ffb976;
+  --danger: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text);
+}
+
+/* ============================================================
+   ANIMATED PARTICLE BACKGROUND
+   Gentle floating particles create a calm, ethereal atmosphere
+   ============================================================ */
+#particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   LAYOUT STRUCTURE
+   Responsive grid that adapts to screen size
+   ============================================================ */
+#app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: rgba(20, 27, 46, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--stroke);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--accent), var(--success));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.logo h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent), var(--success));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--card);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  border: 1px solid var(--stroke);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+  
+  #sidebar {
+    display: none;
+  }
+  
+  #sidebar.mobile-visible {
+    display: flex;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 380px;
+    z-index: 100;
+  }
+}
+
+/* ============================================================
+   VIDEO GRID - Adaptive layout for multiple participants
+   ============================================================ */
+#video-container {
+  position: relative;
+  overflow: auto;
+  padding: 24px;
+}
+
+#video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  min-height: 100%;
+}
+
+.video-wrapper {
+  position: relative;
+  background: var(--panel);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid var(--stroke);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  aspect-ratio: 4/3;
+}
+
+.video-wrapper:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 32px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.video-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-label {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(10, 14, 26, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid var(--stroke);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-label::before {
+  content: '👤';
+  font-size: 14px;
+}
+
+/* ============================================================
+   SIDEBAR - Chat and controls
+   ============================================================ */
+#sidebar {
+  background: rgba(20, 27, 46, 0.95);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid var(--stroke);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-section {
+  padding: 20px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.sidebar-section h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: #4a8aef;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-success {
+  background: var(--success);
+  animation: successPulse 0.6s ease;
+}
+
+@keyframes successPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+}
+
+/* Controls */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.control-btn {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  color: var(--text);
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.control-btn:hover {
+  background: var(--stroke);
+  border-color: var(--accent);
+}
+
+.control-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.control-btn.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+/* Room Info Display */
+.room-info {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.room-name {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+.room-count {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.leave-btn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  width: 100%;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.leave-btn:hover {
+  background: #e55555;
+  transform: translateY(-1px);
+}
+
+/* Chat Section */
+#chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+#chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Custom scrollbar */
+#chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+  background: var(--stroke);
+  border-radius: 3px;
+}
+
+.chat-message {
+  background: var(--card);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  animation: messageSlide 0.3s ease;
+  word-wrap: break-word;
+}
+
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-message .sender {
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+
+.chat-message .text {
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.chat-message.system {
+  background: transparent;
+  border: 1px dashed var(--stroke);
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+#chat-input {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-mid);
+  border-top: 1px solid var(--stroke);
+}
+
+#chat-input input {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+#chat-input input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+#chat-input button {
+  padding: 12px 20px;
+}
+
+/* ============================================================
+   FOOTER - Zero-Harm Notice
+   ============================================================ */
+footer {
+  background: rgba(10, 14, 26, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--stroke);
+  padding: 16px 24px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+footer strong {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* ============================================================
+   ROOM SELECTION SCREEN
+   Users choose from public rooms or create their own
+   ============================================================ */
+#room-selection {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 14, 26, 0.98);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s ease;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.selection-container {
+  max-width: 800px;
+  width: 100%;
+  animation: slideUp 0.6s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.selection-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.selection-header h2 {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--success));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.selection-header p {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+/* Public Rooms Section */
+.section-title {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--stroke);
+}
+
+.section-title::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--stroke);
+}
+
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.room-card {
+  background: var(--panel);
+  border: 2px solid var(--stroke);
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.room-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px var(--accent-glow);
+}
+
+.room-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.room-card h4 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.room-card p {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+/* Custom Room Creation */
+.custom-room {
+  background: var(--panel);
+  border: 2px solid var(--stroke);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+}
+
+.custom-room h3 {
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+.custom-input-group {
+  display: flex;
+  gap: 12px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.custom-input-group input {
+  flex: 1;
+  background: var(--card);
+  border: 2px solid var(--stroke);
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.custom-input-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+.custom-input-group input::placeholder {
+  color: var(--text-dim);
+}
+
+.custom-input-group button {
+  padding: 16px 32px;
+  font-size: 1rem;
+  border-radius: 12px;
+}
+
+/* Privacy Notice */
+.privacy-note {
+  margin-top: 32px;
+  padding: 20px;
+  background: rgba(107, 220, 155, 0.1);
+  border: 1px solid rgba(107, 220, 155, 0.3);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.privacy-note strong {
+  color: var(--success);
+}
+
+.hidden {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+
+<!-- Animated Particle Background -->
+<canvas id="particles"></canvas>
+
+<div id="app">
+  <!-- Room Selection Screen (shown on first load) -->
+  <div id="room-selection">
+    <div class="selection-container">
+      <div class="selection-header">
+        <h2>🕊️ Welcome to ZeroRoom</h2>
+        <p>Choose a room to join and start connecting with others</p>
+      </div>
+
+      <!-- Public Rooms Section -->
+      <div class="section-title">✨ Public Rooms</div>
+      <div class="rooms-grid">
+        <div class="room-card" onclick="joinRoom('meditation-circle')">
+          <span class="room-icon">🧘</span>
+          <h4>Meditation Circle</h4>
+          <p>A quiet space for mindfulness and reflection</p>
+        </div>
+        
+        <div class="room-card" onclick="joinRoom('creative-space')">
+          <span class="room-icon">🎨</span>
+          <h4>Creative Space</h4>
+          <p>Share ideas, art, and creative projects</p>
+        </div>
+        
+        <div class="room-card" onclick="joinRoom('study-hall')">
+          <span class="room-icon">📚</span>
+          <h4>Study Hall</h4>
+          <p>Focus together, support each other's learning</p>
+        </div>
+        
+        <div class="room-card" onclick="joinRoom('coffee-lounge')">
+          <span class="room-icon">☕</span>
+          <h4>Coffee Lounge</h4>
+          <p>Casual conversation and friendly chats</p>
+        </div>
+        
+        <div class="room-card" onclick="joinRoom('support-circle')">
+          <span class="room-icon">🤝</span>
+          <h4>Support Circle</h4>
+          <p>Share experiences, listen, and support</p>
+        </div>
+        
+        <div class="room-card" onclick="joinRoom('music-studio')">
+          <span class="room-icon">🎵</span>
+          <h4>Music Studio</h4>
+          <p>Jam sessions, music sharing, and collaboration</p>
+        </div>
+      </div>
+
+      <!-- Custom Room Creation -->
+      <div class="section-title">🚪 Create or Join Custom Room</div>
+      <div class="custom-room">
+        <h3>Enter a room name to create or join</h3>
+        <div class="custom-input-group">
+          <input 
+            type="text" 
+            id="custom-room-input" 
+            placeholder="e.g. family-reunion, book-club, team-meeting"
+            onkeypress="if(event.key==='Enter') joinCustomRoom()"
+          />
+          <button class="btn" onclick="joinCustomRoom()">Join Room</button>
+        </div>
+      </div>
+
+      <!-- Privacy Notice -->
+      <div class="privacy-note">
+        <strong>🔒 Privacy First:</strong> All rooms are temporary and peer-to-peer. No registration required. 
+        Conversations are never recorded or stored. When everyone leaves, the room disappears.
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application (hidden initially) -->
+  <header class="hidden" id="main-header">
+    <div class="logo">
+      <div class="logo-icon">🕊️</div>
+      <h1>ZeroRoom</h1>
+    </div>
+    <div class="status">
+      <div class="status-dot"></div>
+      <span id="status-text">Connected</span>
+    </div>
+  </header>
+
+  <main class="hidden" id="main-content">
+    <!-- Video Grid Section -->
+    <div id="video-container">
+      <div id="video-grid">
+        <!-- Videos will be dynamically added here -->
+      </div>
+    </div>
+
+    <!-- Sidebar: Controls & Chat -->
+    <div id="sidebar">
+      <!-- Current Room Info -->
+      <div class="sidebar-section">
+        <h3>📍 Current Room</h3>
+        <div class="room-info">
+          <div>
+            <div class="room-name" id="current-room-name">—</div>
+            <div class="room-count" id="room-participant-count">0 participants</div>
+          </div>
+        </div>
+        <button class="leave-btn" onclick="leaveRoom()">🚪 Leave Room</button>
+      </div>
+
+      <!-- Media Controls -->
+      <div class="sidebar-section">
+        <h3>🎛️ Controls</h3>
+        <div class="controls">
+          <button class="control-btn" id="mic-btn" onclick="toggleMic()">
+            <span id="mic-icon">🎤</span>
+            <span id="mic-text">Mute</span>
+          </button>
+          <button class="control-btn" id="cam-btn" onclick="toggleCamera()">
+            <span id="cam-icon">📹</span>
+            <span id="cam-text">Stop Video</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Section -->
+      <div class="sidebar-section" style="flex: 1; display: flex; flex-direction: column; padding: 0; border: none;">
+        <div style="padding: 20px; padding-bottom: 12px;">
+          <h3>💬 Chat</h3>
+        </div>
+        <div id="chat-container">
+          <div id="chat-messages">
+            <!-- Messages will appear here -->
+          </div>
+          <div id="chat-input">
+            <input 
+              type="text" 
+              id="message-input" 
+              placeholder="Type a message..." 
+              onkeypress="if(event.key==='Enter') sendMessage()"
+            />
+            <button class="btn" onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <strong>🛡️ Zero-Harm & Anti-Coercion Commitment:</strong> This platform has no registration, no tracking, no analytics, and no data persistence. All connections are peer-to-peer and ephemeral. No hidden telemetry. No manipulation. This tool exists solely to facilitate peaceful human connection. Your privacy and wellbeing come first.
+    <br><br>
+    <strong>🔧 Cross-Device Setup:</strong> Currently works within the same browser. For cross-device connectivity (different browsers/devices), set up Firebase following the instructions in the code (takes 2 minutes, completely free). Check browser console for details.
+  </footer>
+
+</div>
+
+<!-- PeerJS Library (cloud-based signaling, no server setup required) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+
+<!-- Firebase for peer discovery coordination -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<script>
+/* ============================================================
+   PARTICLE ANIMATION SYSTEM
+   Creates a gentle, flowing background of light particles
+   Symbolizes the ephemeral, peaceful nature of connection
+   ============================================================ */
+class ParticleSystem {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.particles = [];
+    this.particleCount = 50;
+    
+    this.resize();
+    this.init();
+    this.animate();
+    
+    window.addEventListener('resize', () => this.resize());
+  }
+  
+  resize() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+  
+  init() {
+    for (let i = 0; i < this.particleCount; i++) {
+      this.particles.push({
+        x: Math.random() * this.canvas.width,
+        y: Math.random() * this.canvas.height,
+        size: Math.random() * 3 + 1,
+        speedX: Math.random() * 0.5 - 0.25,
+        speedY: Math.random() * 0.5 - 0.25,
+        opacity: Math.random() * 0.5 + 0.2
+      });
+    }
+  }
+  
+  animate() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw gradient background
+    const gradient = this.ctx.createRadialGradient(
+      this.canvas.width / 2, this.canvas.height / 2, 0,
+      this.canvas.width / 2, this.canvas.height / 2, this.canvas.width / 2
+    );
+    gradient.addColorStop(0, 'rgba(91, 158, 255, 0.03)');
+    gradient.addColorStop(1, 'rgba(10, 14, 26, 0)');
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Update and draw particles
+    this.particles.forEach(p => {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      
+      // Wrap around screen
+      if (p.x < 0) p.x = this.canvas.width;
+      if (p.x > this.canvas.width) p.x = 0;
+      if (p.y < 0) p.y = this.canvas.height;
+      if (p.y > this.canvas.height) p.y = 0;
+      
+      // Draw particle with glow
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      this.ctx.fillStyle = `rgba(91, 158, 255, ${p.opacity})`;
+      this.ctx.fill();
+      
+      // Glow effect
+      this.ctx.shadowBlur = 15;
+      this.ctx.shadowColor = `rgba(91, 158, 255, ${p.opacity * 0.8})`;
+    });
+    
+    this.ctx.shadowBlur = 0;
+    requestAnimationFrame(() => this.animate());
+  }
+}
+
+/* ============================================================
+   FIREBASE CONFIGURATION
+   Firebase Realtime Database enables peer discovery across devices
+   
+   SETUP INSTRUCTIONS (takes 2 minutes):
+   1. Go to https://console.firebase.google.com
+   2. Create a new project (any name works)
+   3. Enable Realtime Database
+   4. Set database rules to:
+      {
+        "rules": {
+          "rooms": {
+            ".read": true,
+            ".write": true,
+            "$roomId": {
+              ".indexOn": ["timestamp"]
+            }
+          }
+        }
+      }
+   5. Copy your config from Project Settings > Web App
+   6. Replace the config below with your values
+   
+   Note: The config below is a template. For peer discovery to work
+   across devices, you need to set up your own Firebase project.
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "YOUR-API-KEY-HERE",
+  authDomain: "your-project.firebaseapp.com",
+  databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project-id.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
+};
+
+// Initialize Firebase
+let database = null;
+let firebaseAvailable = false;
+
+try {
+  // Check if config has been updated from template
+  if (firebaseConfig.apiKey !== "YOUR-API-KEY-HERE") {
+    firebase.initializeApp(firebaseConfig);
+    database = firebase.database();
+    firebaseAvailable = true;
+    console.log('✅ Firebase initialized - cross-device peer discovery enabled');
+  } else {
+    console.warn('⚠️ Firebase not configured - see code comments for setup instructions');
+    console.warn('📝 Peer discovery will work in same browser only');
+  }
+} catch (error) {
+  console.error('⚠️ Firebase initialization failed:', error);
+  console.warn('📝 Peer discovery will work in same browser only');
+}
+
+/* ============================================================
+   CORE APPLICATION STATE
+   Manages peer connections, media streams, and room state
+   Uses Firebase for cross-device peer discovery
+   ============================================================ */
+const App = {
+  peer: null,
+  myPeerId: null,
+  currentRoom: null,
+  localStream: null,
+  peers: {}, // { peerId: { connection, call, stream } }
+  micEnabled: true,
+  cameraEnabled: true,
+  roomRef: null,
+  myPresenceRef: null,
+  
+  /* Initialize the application */
+  init() {
+    // Initialize particle background
+    new ParticleSystem(document.getElementById('particles'));
+    
+    // Show Firebase status in console
+    if (!firebaseAvailable) {
+      console.log('');
+      console.log('🔧 SETUP REQUIRED FOR CROSS-DEVICE CONNECTIVITY');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Currently using localStorage fallback (same browser only)');
+      console.log('To enable cross-device connections:');
+      console.log('1. Set up Firebase (takes 2 minutes - see code comments)');
+      console.log('2. Update firebaseConfig in the script');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('');
+    }
+  },
+  
+  
+  /* Join a specific room */
+  async joinRoom(roomName) {
+    this.currentRoom = roomName;
+    
+    try {
+      // Request camera and microphone access
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720 },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      
+      // Hide room selection, show main app
+      document.getElementById('room-selection').classList.add('hidden');
+      document.getElementById('main-header').classList.remove('hidden');
+      document.getElementById('main-content').classList.remove('hidden');
+      
+      // Update room info
+      document.getElementById('current-room-name').textContent = roomName;
+      this.updateParticipantCount();
+      
+      // Add local video to grid
+      this.addVideoElement('You (Me)', this.localStream, true);
+      
+      // Initialize PeerJS with random ID
+      this.peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+      
+      // Set up peer event listeners
+      this.peer.on('open', (id) => {
+        this.myPeerId = id;
+        console.log('🎯 My Peer ID:', id);
+        
+        // Register with Firebase for peer discovery
+        this.registerInRoom();
+        
+        this.updateStatus('Connected', true);
+        this.addChatMessage(null, `Joined ${roomName}!`, true);
+      });
+      
+      this.peer.on('connection', (conn) => {
+        this.handleConnection(conn);
+      });
+      
+      this.peer.on('call', (call) => {
+        this.handleCall(call);
+      });
+      
+      this.peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        this.updateStatus('Connection Error', false);
+      });
+      
+    } catch (err) {
+      console.error('Error accessing media:', err);
+      alert('Could not access camera/microphone. Please grant permissions and try again.');
+      this.leaveRoom();
+    }
+  },
+  
+  /* Register this peer in room for discovery */
+  registerInRoom() {
+    if (firebaseAvailable && database) {
+      this.registerInFirebase();
+    } else {
+      this.registerInLocalStorage();
+    }
+  },
+  
+  /* Register using Firebase (cross-device) */
+  registerInFirebase() {
+    try {
+      // Reference to this room
+      this.roomRef = database.ref(`rooms/${this.currentRoom}`);
+      
+      // Reference to my presence in the room
+      this.myPresenceRef = this.roomRef.child(this.myPeerId);
+      
+      // Set my peer ID with timestamp
+      this.myPresenceRef.set({
+        peerId: this.myPeerId,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+      
+      // Remove my presence when I disconnect (Firebase presence system)
+      this.myPresenceRef.onDisconnect().remove();
+      
+      console.log('✅ Registered in room via Firebase:', this.currentRoom);
+      
+      // Listen for other peers in the room
+      this.roomRef.on('child_added', (snapshot) => {
+        const peerId = snapshot.key;
+        
+        // Don't connect to myself
+        if (peerId === this.myPeerId) return;
+        
+        // Don't reconnect to existing peers
+        if (this.peers[peerId]) return;
+        
+        console.log('👋 Discovered peer via Firebase:', peerId);
+        
+        // Small delay to avoid race conditions
+        setTimeout(() => {
+          this.connectToPeer(peerId);
+        }, 100);
+      });
+      
+      // Listen for peers leaving
+      this.roomRef.on('child_removed', (snapshot) => {
+        const peerId = snapshot.key;
+        
+        if (peerId !== this.myPeerId) {
+          console.log('👋 Peer left (Firebase):', peerId);
+          this.removePeer(peerId);
+        }
+      });
+      
+    } catch (error) {
+      console.error('Firebase registration error:', error);
+      // Fall back to localStorage
+      this.registerInLocalStorage();
+    }
+  },
+  
+  /* Register using localStorage (same-browser fallback) */
+  registerInLocalStorage() {
+    console.log('📝 Using localStorage for peer discovery (same browser only)');
+    
+    const roomKey = `zeroroom_${this.currentRoom}`;
+    
+    // Get existing peers
+    const roomPeers = JSON.parse(localStorage.getItem(roomKey) || '[]');
+    
+    // Connect to existing peers
+    roomPeers.forEach(peerId => {
+      if (peerId !== this.myPeerId && !this.peers[peerId]) {
+        console.log('👋 Discovered peer via localStorage:', peerId);
+        setTimeout(() => this.connectToPeer(peerId), 100);
+      }
+    });
+    
+    // Add myself
+    if (!roomPeers.includes(this.myPeerId)) {
+      roomPeers.push(this.myPeerId);
+      localStorage.setItem(roomKey, JSON.stringify(roomPeers));
+    }
+    
+    // Poll for new peers every 2 seconds
+    this.localStoragePollInterval = setInterval(() => {
+      const currentPeers = JSON.parse(localStorage.getItem(roomKey) || '[]');
+      currentPeers.forEach(peerId => {
+        if (peerId !== this.myPeerId && !this.peers[peerId]) {
+          console.log('👋 New peer detected via localStorage:', peerId);
+          this.connectToPeer(peerId);
+        }
+      });
+    }, 2000);
+    
+    // Clean up on unload
+    window.addEventListener('beforeunload', () => {
+      const peers = JSON.parse(localStorage.getItem(roomKey) || '[]');
+      const filtered = peers.filter(p => p !== this.myPeerId);
+      localStorage.setItem(roomKey, JSON.stringify(filtered));
+    });
+    
+    this.updateParticipantCount();
+  },
+  
+  /* Connect to a specific peer */
+  connectToPeer(peerId) {
+    if (this.peers[peerId]) {
+      console.log('⚠️ Already connected to', peerId);
+      return;
+    }
+    
+    console.log('🔗 Connecting to peer:', peerId);
+    
+    // Establish data connection for chat
+    const conn = this.peer.connect(peerId, { reliable: true });
+    
+    conn.on('open', () => {
+      console.log('✅ Data connection established with:', peerId);
+      
+      // Call peer for video
+      const call = this.peer.call(peerId, this.localStream);
+      
+      call.on('stream', (remoteStream) => {
+        this.handleRemoteStream(peerId, remoteStream);
+      });
+      
+      call.on('error', (err) => {
+        console.error('Call error with', peerId, ':', err);
+      });
+      
+      this.peers[peerId] = { connection: conn, call: call };
+      this.setupConnectionListeners(conn, peerId);
+      this.updateParticipantCount();
+    });
+    
+    conn.on('error', (err) => {
+      console.error('Connection error to peer', peerId, ':', err);
+      // Clean up failed connection
+      delete this.peers[peerId];
+    });
+  },
+  
+  /* Handle incoming connection */
+  handleConnection(conn) {
+    const peerId = conn.peer;
+    
+    console.log('📞 Incoming connection from:', peerId);
+    
+    if (!this.peers[peerId]) {
+      this.peers[peerId] = { connection: conn };
+    } else {
+      this.peers[peerId].connection = conn;
+    }
+    
+    this.setupConnectionListeners(conn, peerId);
+    this.updateParticipantCount();
+  },
+  
+  /* Handle incoming call */
+  handleCall(call) {
+    const peerId = call.peer;
+    
+    // Answer call with local stream
+    call.answer(this.localStream);
+    
+    call.on('stream', (remoteStream) => {
+      this.handleRemoteStream(peerId, remoteStream);
+    });
+    
+    if (!this.peers[peerId]) {
+      this.peers[peerId] = { call: call };
+    } else {
+      this.peers[peerId].call = call;
+    }
+  },
+  
+  /* Set up listeners for data connection */
+  setupConnectionListeners(conn, peerId) {
+    conn.on('data', (data) => {
+      if (data.type === 'chat') {
+        this.addChatMessage(data.sender, data.message);
+      } else if (data.type === 'join') {
+        this.addChatMessage(null, `Someone joined`, true);
+      }
+    });
+    
+    conn.on('close', () => {
+      console.log('🔌 Connection closed with:', peerId);
+      this.removePeer(peerId);
+    });
+    
+    conn.on('error', (err) => {
+      console.error('Connection error with', peerId, ':', err);
+    });
+    
+    // Send join notification
+    if (conn.open) {
+      conn.send({
+        type: 'join',
+        sender: 'Someone'
+      });
+    }
+  },
+  
+  /* Handle remote video stream */
+  handleRemoteStream(peerId, stream) {
+    if (this.peers[peerId]) {
+      this.peers[peerId].stream = stream;
+    }
+    
+    const participantNumber = Object.keys(this.peers).indexOf(peerId) + 1;
+    this.addVideoElement(`Participant ${participantNumber}`, stream);
+    this.updateParticipantCount();
+  },
+  
+  /* Add video element to grid */
+  addVideoElement(label, stream, muted = false) {
+    // Check if video already exists
+    const existing = document.querySelector(`[data-stream-id="${stream.id}"]`);
+    if (existing) return;
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'video-wrapper';
+    wrapper.dataset.streamId = stream.id;
+    
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = muted;
+    
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'video-label';
+    labelDiv.textContent = label;
+    
+    wrapper.appendChild(video);
+    wrapper.appendChild(labelDiv);
+    document.getElementById('video-grid').appendChild(wrapper);
+  },
+  
+  /* Remove peer from connections */
+  removePeer(peerId) {
+    const peer = this.peers[peerId];
+    if (peer) {
+      if (peer.call) peer.call.close();
+      if (peer.connection) peer.connection.close();
+      if (peer.stream) {
+        const videoEl = document.querySelector(`[data-stream-id="${peer.stream.id}"]`);
+        if (videoEl) videoEl.remove();
+      }
+      delete this.peers[peerId];
+      this.addChatMessage(null, 'A participant left', true);
+      this.updateParticipantCount();
+    }
+  },
+  
+  /* Update participant count display */
+  updateParticipantCount() {
+    const count = Object.keys(this.peers).length + 1; // +1 for self
+    const countEl = document.getElementById('room-participant-count');
+    countEl.textContent = `${count} participant${count !== 1 ? 's' : ''}`;
+  },
+  
+  /* Add message to chat */
+  addChatMessage(sender, message, isSystem = false) {
+    const chatMessages = document.getElementById('chat-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = isSystem ? 'chat-message system' : 'chat-message';
+    
+    if (isSystem) {
+      msgDiv.innerHTML = `<span class="text">${message}</span>`;
+    } else {
+      msgDiv.innerHTML = `
+        <div class="sender">${sender || 'You'}</div>
+        <div class="text">${this.escapeHtml(message)}</div>
+      `;
+    }
+    
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  },
+  
+  /* Broadcast chat message to all peers */
+  broadcastMessage(message) {
+    Object.values(this.peers).forEach(peer => {
+      if (peer.connection && peer.connection.open) {
+        peer.connection.send({
+          type: 'chat',
+          sender: 'Someone',
+          message: message
+        });
+      }
+    });
+  },
+  
+  /* Toggle microphone */
+  toggleMic() {
+    this.micEnabled = !this.micEnabled;
+    this.localStream.getAudioTracks().forEach(track => {
+      track.enabled = this.micEnabled;
+    });
+    
+    const btn = document.getElementById('mic-btn');
+    const icon = document.getElementById('mic-icon');
+    const text = document.getElementById('mic-text');
+    
+    if (this.micEnabled) {
+      btn.classList.remove('active');
+      icon.textContent = '🎤';
+      text.textContent = 'Mute';
+    } else {
+      btn.classList.add('active');
+      icon.textContent = '🔇';
+      text.textContent = 'Unmute';
+    }
+  },
+  
+  /* Toggle camera */
+  toggleCamera() {
+    this.cameraEnabled = !this.cameraEnabled;
+    this.localStream.getVideoTracks().forEach(track => {
+      track.enabled = this.cameraEnabled;
+    });
+    
+    const btn = document.getElementById('cam-btn');
+    const icon = document.getElementById('cam-icon');
+    const text = document.getElementById('cam-text');
+    
+    if (this.cameraEnabled) {
+      btn.classList.remove('active');
+      icon.textContent = '📹';
+      text.textContent = 'Stop Video';
+    } else {
+      btn.classList.add('active');
+      icon.textContent = '🚫';
+      text.textContent = 'Start Video';
+    }
+  },
+  
+  /* Leave current room and return to selection */
+  leaveRoom() {
+    // Clean up localStorage polling
+    if (this.localStoragePollInterval) {
+      clearInterval(this.localStoragePollInterval);
+      this.localStoragePollInterval = null;
+    }
+    
+    // Remove from localStorage
+    if (this.currentRoom && this.myPeerId) {
+      const roomKey = `zeroroom_${this.currentRoom}`;
+      const peers = JSON.parse(localStorage.getItem(roomKey) || '[]');
+      const filtered = peers.filter(p => p !== this.myPeerId);
+      if (filtered.length > 0) {
+        localStorage.setItem(roomKey, JSON.stringify(filtered));
+      } else {
+        localStorage.removeItem(roomKey);
+      }
+    }
+    
+    // Clean up Firebase presence
+    if (this.myPresenceRef) {
+      this.myPresenceRef.remove();
+      this.myPresenceRef = null;
+    }
+    
+    // Stop listening to room changes
+    if (this.roomRef) {
+      this.roomRef.off();
+      this.roomRef = null;
+    }
+    
+    // Stop all media
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream = null;
+    }
+    
+    // Close all peer connections
+    Object.keys(this.peers).forEach(peerId => {
+      this.removePeer(peerId);
+    });
+    
+    // Close peer
+    if (this.peer) {
+      this.peer.destroy();
+      this.peer = null;
+    }
+    
+    // Clear video grid
+    document.getElementById('video-grid').innerHTML = '';
+    
+    // Clear chat
+    document.getElementById('chat-messages').innerHTML = '';
+    
+    // Reset state
+    this.currentRoom = null;
+    this.myPeerId = null;
+    this.peers = {};
+    
+    // Show room selection again
+    document.getElementById('main-header').classList.add('hidden');
+    document.getElementById('main-content').classList.add('hidden');
+    document.getElementById('room-selection').classList.remove('hidden');
+  },
+  
+  /* Update connection status */
+  updateStatus(text, connected) {
+    document.getElementById('status-text').textContent = text;
+    const dot = document.querySelector('.status-dot');
+    if (dot) {
+      dot.style.background = connected ? 'var(--success)' : 'var(--danger)';
+    }
+  },
+  
+  /* Escape HTML to prevent XSS */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+};
+
+/* ============================================================
+   UI EVENT HANDLERS
+   ============================================================ */
+
+/* Join a predefined public room */
+function joinRoom(roomName) {
+  App.joinRoom(roomName);
+}
+
+/* Join a custom room from user input */
+function joinCustomRoom() {
+  const input = document.getElementById('custom-room-input');
+  const roomName = input.value.trim().toLowerCase();
+  
+  if (!roomName) {
+    alert('Please enter a room name');
+    return;
+  }
+  
+  // Sanitize room name (alphanumeric and hyphens only)
+  const sanitized = roomName.replace(/[^a-z0-9-]/g, '-');
+  
+  if (sanitized.length < 3) {
+    alert('Room name must be at least 3 characters');
+    return;
+  }
+  
+  App.joinRoom(sanitized);
+}
+
+/* Leave current room */
+function leaveRoom() {
+  if (confirm('Are you sure you want to leave this room?')) {
+    App.leaveRoom();
+  }
+}
+
+/* Send chat message */
+function sendMessage() {
+  const input = document.getElementById('message-input');
+  const message = input.value.trim();
+  
+  if (!message) return;
+  
+  // Add to local chat
+  App.addChatMessage(null, message);
+  
+  // Broadcast to peers
+  App.broadcastMessage(message);
+  
+  input.value = '';
+}
+
+/* Toggle microphone */
+function toggleMic() {
+  App.toggleMic();
+}
+
+/* Toggle camera */
+function toggleCamera() {
+  App.toggleCamera();
+}
+
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
+App.init();
+</script>
+
+</body>
+</html>
