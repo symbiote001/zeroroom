@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZeroRoom — Peaceful Group Video Chat</title>
-<meta name="description" content="No-registration group video & text chat. Privacy-first. Share a link and connect.">
+<meta name="description" content="No-registration group video & text chat. Privacy-first. Walk into any room and connect.">
 
 <style>
 /* ============================================================
@@ -247,27 +247,6 @@ main {
   font-weight: 600;
 }
 
-/* Room Link Sharing */
-.room-link {
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.room-link input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text);
-  font-size: 0.85rem;
-  font-family: 'Courier New', monospace;
-}
-
 .btn {
   background: var(--accent);
   color: white;
@@ -338,6 +317,47 @@ main {
   background: var(--danger);
   border-color: var(--danger);
   color: white;
+}
+
+/* Room Info Display */
+.room-info {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.room-name {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+.room-count {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.leave-btn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  width: 100%;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.leave-btn:hover {
+  background: #e55555;
+  transform: translateY(-1px);
 }
 
 /* Chat Section */
@@ -462,9 +482,10 @@ footer strong {
 }
 
 /* ============================================================
-   WELCOME SCREEN - Initial setup
+   ROOM SELECTION SCREEN
+   Users choose from public rooms or create their own
    ============================================================ */
-#welcome {
+#room-selection {
   position: fixed;
   top: 0;
   left: 0;
@@ -477,6 +498,8 @@ footer strong {
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.5s ease;
+  overflow-y: auto;
+  padding: 20px;
 }
 
 @keyframes fadeIn {
@@ -484,14 +507,9 @@ footer strong {
   to { opacity: 1; }
 }
 
-.welcome-card {
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  border-radius: 24px;
-  padding: 48px;
-  max-width: 500px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
-  text-align: center;
+.selection-container {
+  max-width: 800px;
+  width: 100%;
   animation: slideUp 0.6s ease;
 }
 
@@ -506,8 +524,13 @@ footer strong {
   }
 }
 
-.welcome-card h2 {
-  font-size: 2rem;
+.selection-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.selection-header h2 {
+  font-size: 2.5rem;
   margin-bottom: 12px;
   background: linear-gradient(135deg, var(--accent), var(--success));
   -webkit-background-clip: text;
@@ -515,43 +538,144 @@ footer strong {
   background-clip: text;
 }
 
-.welcome-card p {
+.selection-header p {
   color: var(--text-dim);
-  margin-bottom: 32px;
+  font-size: 1.1rem;
   line-height: 1.6;
 }
 
-.welcome-card .btn {
+/* Public Rooms Section */
+.section-title {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--stroke);
+}
+
+.section-title::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--stroke);
+}
+
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.room-card {
+  background: var(--panel);
+  border: 2px solid var(--stroke);
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.room-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px var(--accent-glow);
+}
+
+.room-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.room-card h4 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.room-card p {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+/* Custom Room Creation */
+.custom-room {
+  background: var(--panel);
+  border: 2px solid var(--stroke);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+}
+
+.custom-room h3 {
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+.custom-input-group {
+  display: flex;
+  gap: 12px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.custom-input-group input {
+  flex: 1;
+  background: var(--card);
+  border: 2px solid var(--stroke);
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.custom-input-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+.custom-input-group input::placeholder {
+  color: var(--text-dim);
+}
+
+.custom-input-group button {
   padding: 16px 32px;
   font-size: 1rem;
-  width: 100%;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 32px;
-  text-align: left;
-}
-
-.info-item {
-  background: var(--card);
-  padding: 16px;
   border-radius: 12px;
-  border: 1px solid var(--stroke);
 }
 
-.info-item strong {
-  display: block;
-  color: var(--accent);
-  margin-bottom: 4px;
+/* Privacy Notice */
+.privacy-note {
+  margin-top: 32px;
+  padding: 20px;
+  background: rgba(107, 220, 155, 0.1);
+  border: 1px solid rgba(107, 220, 155, 0.3);
+  border-radius: 12px;
   font-size: 0.85rem;
-}
-
-.info-item span {
   color: var(--text-dim);
-  font-size: 0.85rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.privacy-note strong {
+  color: var(--success);
 }
 
 .hidden {
@@ -565,37 +689,79 @@ footer strong {
 <canvas id="particles"></canvas>
 
 <div id="app">
-  <!-- Welcome Screen (shown on first load) -->
-  <div id="welcome">
-    <div class="welcome-card">
-      <h2>🕊️ Welcome to ZeroRoom</h2>
-      <p>A peaceful space for group video conversations.<br>No accounts. No tracking. Just connect.</p>
-      
-      <button class="btn" onclick="startSession()">🎥 Join Video Call</button>
-      
-      <div class="info-grid">
-        <div class="info-item">
-          <strong>🔒 Private</strong>
-          <span>Nothing recorded or stored</span>
+  <!-- Room Selection Screen (shown on first load) -->
+  <div id="room-selection">
+    <div class="selection-container">
+      <div class="selection-header">
+        <h2>🕊️ Welcome to ZeroRoom</h2>
+        <p>Choose a room to join and start connecting with others</p>
+      </div>
+
+      <!-- Public Rooms Section -->
+      <div class="section-title">✨ Public Rooms</div>
+      <div class="rooms-grid">
+        <div class="room-card" onclick="joinRoom('meditation-circle')">
+          <span class="room-icon">🧘</span>
+          <h4>Meditation Circle</h4>
+          <p>A quiet space for mindfulness and reflection</p>
         </div>
-        <div class="info-item">
-          <strong>🌐 Peer-to-Peer</strong>
-          <span>Direct connections only</span>
+        
+        <div class="room-card" onclick="joinRoom('creative-space')">
+          <span class="room-icon">🎨</span>
+          <h4>Creative Space</h4>
+          <p>Share ideas, art, and creative projects</p>
         </div>
-        <div class="info-item">
-          <strong>🚫 No Registration</strong>
-          <span>Share link to invite</span>
+        
+        <div class="room-card" onclick="joinRoom('study-hall')">
+          <span class="room-icon">📚</span>
+          <h4>Study Hall</h4>
+          <p>Focus together, support each other's learning</p>
         </div>
-        <div class="info-item">
-          <strong>💚 Zero Harm</strong>
-          <span>Built with care & respect</span>
+        
+        <div class="room-card" onclick="joinRoom('coffee-lounge')">
+          <span class="room-icon">☕</span>
+          <h4>Coffee Lounge</h4>
+          <p>Casual conversation and friendly chats</p>
         </div>
+        
+        <div class="room-card" onclick="joinRoom('support-circle')">
+          <span class="room-icon">🤝</span>
+          <h4>Support Circle</h4>
+          <p>Share experiences, listen, and support</p>
+        </div>
+        
+        <div class="room-card" onclick="joinRoom('music-studio')">
+          <span class="room-icon">🎵</span>
+          <h4>Music Studio</h4>
+          <p>Jam sessions, music sharing, and collaboration</p>
+        </div>
+      </div>
+
+      <!-- Custom Room Creation -->
+      <div class="section-title">🚪 Create or Join Custom Room</div>
+      <div class="custom-room">
+        <h3>Enter a room name to create or join</h3>
+        <div class="custom-input-group">
+          <input 
+            type="text" 
+            id="custom-room-input" 
+            placeholder="e.g. family-reunion, book-club, team-meeting"
+            onkeypress="if(event.key==='Enter') joinCustomRoom()"
+          />
+          <button class="btn" onclick="joinCustomRoom()">Join Room</button>
+        </div>
+      </div>
+
+      <!-- Privacy Notice -->
+      <div class="privacy-note">
+        <strong>🔒 Privacy First:</strong> All rooms are temporary and peer-to-peer. No registration required. 
+        Conversations are never recorded or stored. When everyone leaves, the room disappears.
       </div>
     </div>
   </div>
 
-  <!-- Main Application -->
-  <header>
+  <!-- Main Application (hidden initially) -->
+  <header class="hidden" id="main-header">
     <div class="logo">
       <div class="logo-icon">🕊️</div>
       <h1>ZeroRoom</h1>
@@ -606,7 +772,7 @@ footer strong {
     </div>
   </header>
 
-  <main>
+  <main class="hidden" id="main-content">
     <!-- Video Grid Section -->
     <div id="video-container">
       <div id="video-grid">
@@ -616,13 +782,16 @@ footer strong {
 
     <!-- Sidebar: Controls & Chat -->
     <div id="sidebar">
-      <!-- Room Link Section -->
+      <!-- Current Room Info -->
       <div class="sidebar-section">
-        <h3>📎 Share This Room</h3>
-        <div class="room-link">
-          <input type="text" id="room-link" readonly />
-          <button class="btn" id="copy-btn" onclick="copyRoomLink()">Copy</button>
+        <h3>📍 Current Room</h3>
+        <div class="room-info">
+          <div>
+            <div class="room-name" id="current-room-name">—</div>
+            <div class="room-count" id="room-participant-count">0 participants</div>
+          </div>
         </div>
+        <button class="leave-btn" onclick="leaveRoom()">🚪 Leave Room</button>
       </div>
 
       <!-- Media Controls -->
@@ -647,9 +816,7 @@ footer strong {
         </div>
         <div id="chat-container">
           <div id="chat-messages">
-            <div class="chat-message system">
-              Welcome! Share the room link to invite others.
-            </div>
+            <!-- Messages will appear here -->
           </div>
           <div id="chat-input">
             <input 
@@ -758,30 +925,22 @@ class ParticleSystem {
 const App = {
   peer: null,
   myPeerId: null,
-  roomId: null,
+  currentRoom: null,
   localStream: null,
   peers: {}, // { peerId: { connection, call, stream } }
   micEnabled: true,
   cameraEnabled: true,
   
   /* Initialize the application */
-  async init() {
-    // Set up room ID from URL hash or create new one
-    this.roomId = window.location.hash.slice(1);
-    if (!this.roomId) {
-      this.roomId = this.generateRoomId();
-      window.location.hash = this.roomId;
-    }
-    
-    // Display room link
-    document.getElementById('room-link').value = window.location.href;
-    
+  init() {
     // Initialize particle background
     new ParticleSystem(document.getElementById('particles'));
   },
   
-  /* Start the video session */
-  async startSession() {
+  /* Join a specific room */
+  async joinRoom(roomName) {
+    this.currentRoom = roomName;
+    
     try {
       // Request camera and microphone access
       this.localStream = await navigator.mediaDevices.getUserMedia({
@@ -792,6 +951,15 @@ const App = {
           autoGainControl: true
         }
       });
+      
+      // Hide room selection, show main app
+      document.getElementById('room-selection').classList.add('hidden');
+      document.getElementById('main-header').classList.remove('hidden');
+      document.getElementById('main-content').classList.remove('hidden');
+      
+      // Update room info
+      document.getElementById('current-room-name').textContent = roomName;
+      this.updateParticipantCount();
       
       // Add local video to grid
       this.addVideoElement('You (Me)', this.localStream, true);
@@ -809,7 +977,7 @@ const App = {
       // Set up peer event listeners
       this.peer.on('open', (id) => {
         this.myPeerId = id;
-        this.broadcastJoin();
+        this.announceToRoom();
         this.updateStatus('Connected', true);
       });
       
@@ -826,34 +994,20 @@ const App = {
         this.updateStatus('Connection Error', false);
       });
       
-      // Hide welcome screen
-      document.getElementById('welcome').classList.add('hidden');
-      
-      // Add system message
-      this.addChatMessage(null, 'You joined the room', true);
+      // Add welcome message
+      this.addChatMessage(null, `Welcome to ${roomName}!`, true);
       
     } catch (err) {
       console.error('Error accessing media:', err);
       alert('Could not access camera/microphone. Please grant permissions and try again.');
+      this.leaveRoom();
     }
   },
   
-  /* Generate a human-readable room ID */
-  generateRoomId() {
-    const words = ['peaceful', 'gentle', 'serene', 'calm', 'quiet', 'still', 'bright', 'clear'];
-    const word = words[Math.floor(Math.random() * words.length)];
-    const num = Math.floor(Math.random() * 9000) + 1000;
-    return `${word}-${num}`;
-  },
-  
-  /* Broadcast join message to room (using URL hash as room identifier) */
-  broadcastJoin() {
-    // In a real peer-to-peer mesh, you would connect to a discovery server
-    // For this demo, we use the URL hash as an implicit "room"
-    // Peers joining with the same hash will attempt to connect via the mesh
-    
-    // Store peer ID in localStorage for this room (simple mesh coordination)
-    const roomPeers = JSON.parse(localStorage.getItem(`room_${this.roomId}`) || '[]');
+  /* Announce presence to room using localStorage-based discovery */
+  announceToRoom() {
+    const roomKey = `zeroroom_${this.currentRoom}`;
+    const roomPeers = JSON.parse(localStorage.getItem(roomKey) || '[]');
     
     // Connect to all existing peers in room
     roomPeers.forEach(peerId => {
@@ -865,15 +1019,25 @@ const App = {
     // Add self to room peer list
     if (!roomPeers.includes(this.myPeerId)) {
       roomPeers.push(this.myPeerId);
-      localStorage.setItem(`room_${this.roomId}`, JSON.stringify(roomPeers));
+      localStorage.setItem(roomKey, JSON.stringify(roomPeers));
     }
+    
+    this.updateParticipantCount();
     
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {
-      const peers = JSON.parse(localStorage.getItem(`room_${this.roomId}`) || '[]');
-      const filtered = peers.filter(p => p !== this.myPeerId);
-      localStorage.setItem(`room_${this.roomId}`, JSON.stringify(filtered));
+      this.removeFromRoom();
     });
+  },
+  
+  /* Remove self from room */
+  removeFromRoom() {
+    if (!this.currentRoom || !this.myPeerId) return;
+    
+    const roomKey = `zeroroom_${this.currentRoom}`;
+    const roomPeers = JSON.parse(localStorage.getItem(roomKey) || '[]');
+    const filtered = roomPeers.filter(p => p !== this.myPeerId);
+    localStorage.setItem(roomKey, JSON.stringify(filtered));
   },
   
   /* Connect to a specific peer */
@@ -893,6 +1057,7 @@ const App = {
       
       this.peers[peerId] = { connection: conn, call: call };
       this.setupConnectionListeners(conn, peerId);
+      this.updateParticipantCount();
     });
   },
   
@@ -907,6 +1072,7 @@ const App = {
     }
     
     this.setupConnectionListeners(conn, peerId);
+    this.updateParticipantCount();
   },
   
   /* Handle incoming call */
@@ -944,7 +1110,7 @@ const App = {
     // Send join notification
     conn.send({
       type: 'join',
-      sender: 'User'
+      sender: 'Someone'
     });
   },
   
@@ -953,11 +1119,18 @@ const App = {
     if (this.peers[peerId]) {
       this.peers[peerId].stream = stream;
     }
-    this.addVideoElement(`User ${Object.keys(this.peers).indexOf(peerId) + 1}`, stream);
+    
+    const participantNumber = Object.keys(this.peers).indexOf(peerId) + 1;
+    this.addVideoElement(`Participant ${participantNumber}`, stream);
+    this.updateParticipantCount();
   },
   
   /* Add video element to grid */
   addVideoElement(label, stream, muted = false) {
+    // Check if video already exists
+    const existing = document.querySelector(`[data-stream-id="${stream.id}"]`);
+    if (existing) return;
+    
     const wrapper = document.createElement('div');
     wrapper.className = 'video-wrapper';
     wrapper.dataset.streamId = stream.id;
@@ -988,8 +1161,16 @@ const App = {
         if (videoEl) videoEl.remove();
       }
       delete this.peers[peerId];
-      this.addChatMessage(null, 'A user left', true);
+      this.addChatMessage(null, 'A participant left', true);
+      this.updateParticipantCount();
     }
+  },
+  
+  /* Update participant count display */
+  updateParticipantCount() {
+    const count = Object.keys(this.peers).length + 1; // +1 for self
+    const countEl = document.getElementById('room-participant-count');
+    countEl.textContent = `${count} participant${count !== 1 ? 's' : ''}`;
   },
   
   /* Add message to chat */
@@ -1017,7 +1198,7 @@ const App = {
       if (peer.connection && peer.connection.open) {
         peer.connection.send({
           type: 'chat',
-          sender: 'You',
+          sender: 'Someone',
           message: message
         });
       }
@@ -1068,11 +1249,52 @@ const App = {
     }
   },
   
+  /* Leave current room and return to selection */
+  leaveRoom() {
+    // Stop all media
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream = null;
+    }
+    
+    // Close all peer connections
+    Object.keys(this.peers).forEach(peerId => {
+      this.removePeer(peerId);
+    });
+    
+    // Close peer
+    if (this.peer) {
+      this.peer.destroy();
+      this.peer = null;
+    }
+    
+    // Remove from room
+    this.removeFromRoom();
+    
+    // Clear video grid
+    document.getElementById('video-grid').innerHTML = '';
+    
+    // Clear chat
+    document.getElementById('chat-messages').innerHTML = '';
+    
+    // Reset state
+    this.currentRoom = null;
+    this.myPeerId = null;
+    this.peers = {};
+    
+    // Show room selection again
+    document.getElementById('main-header').classList.add('hidden');
+    document.getElementById('main-content').classList.add('hidden');
+    document.getElementById('room-selection').classList.remove('hidden');
+  },
+  
   /* Update connection status */
   updateStatus(text, connected) {
     document.getElementById('status-text').textContent = text;
     const dot = document.querySelector('.status-dot');
-    dot.style.background = connected ? 'var(--success)' : 'var(--danger)';
+    if (dot) {
+      dot.style.background = connected ? 'var(--success)' : 'var(--danger)';
+    }
   },
   
   /* Escape HTML to prevent XSS */
@@ -1086,10 +1308,41 @@ const App = {
 /* ============================================================
    UI EVENT HANDLERS
    ============================================================ */
-function startSession() {
-  App.startSession();
+
+/* Join a predefined public room */
+function joinRoom(roomName) {
+  App.joinRoom(roomName);
 }
 
+/* Join a custom room from user input */
+function joinCustomRoom() {
+  const input = document.getElementById('custom-room-input');
+  const roomName = input.value.trim().toLowerCase();
+  
+  if (!roomName) {
+    alert('Please enter a room name');
+    return;
+  }
+  
+  // Sanitize room name (alphanumeric and hyphens only)
+  const sanitized = roomName.replace(/[^a-z0-9-]/g, '-');
+  
+  if (sanitized.length < 3) {
+    alert('Room name must be at least 3 characters');
+    return;
+  }
+  
+  App.joinRoom(sanitized);
+}
+
+/* Leave current room */
+function leaveRoom() {
+  if (confirm('Are you sure you want to leave this room?')) {
+    App.leaveRoom();
+  }
+}
+
+/* Send chat message */
 function sendMessage() {
   const input = document.getElementById('message-input');
   const message = input.value.trim();
@@ -1105,26 +1358,12 @@ function sendMessage() {
   input.value = '';
 }
 
-function copyRoomLink() {
-  const input = document.getElementById('room-link');
-  input.select();
-  document.execCommand('copy');
-  
-  const btn = document.getElementById('copy-btn');
-  const originalText = btn.textContent;
-  btn.textContent = '✓ Copied!';
-  btn.classList.add('btn-success');
-  
-  setTimeout(() => {
-    btn.textContent = originalText;
-    btn.classList.remove('btn-success');
-  }, 2000);
-}
-
+/* Toggle microphone */
 function toggleMic() {
   App.toggleMic();
 }
 
+/* Toggle camera */
 function toggleCamera() {
   App.toggleCamera();
 }
